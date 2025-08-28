@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="7a4e46d7-e68a-4438-b8ed-8f4bb682ed95" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/.idea/PythonProject.iml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/profiles_settings.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/modules.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/bronze/activity_raw.csv" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/bronze/courses_raw.csv" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/bronze/db_connect.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/bronze/enrollments_raw.csv" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/bronze/instructors_raw.csv" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/bronze/load_bronze.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/bronze/payments_raw.csv" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/bronze/students_raw.csv" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/etl.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/gold/etl.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/gold/gold_table_build.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/gold/gold_to_csv.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/gold/new_etl_gold_to_file.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/silver/build_silver.py" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="ProjectColorInfo"><![CDATA[{
+  "associatedIndex": 4
+}]]></component>
+  <component name="ProjectId" id="31u3jlxhJv2FzBv7io17S9gVace" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "ModuleVcsDetector.initialDetectionPerformed": "true",
+    "Python.build_silver.executor": "Run",
+    "Python.etl.executor": "Run",
+    "Python.gold_table_build.executor": "Run",
+    "Python.gold_to_csv.executor": "Run",
+    "Python.load_bronze.executor": "Run",
+    "Python.new_etl_gold_to_file.executor": "Run",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "git-widget-placeholder": "master",
+    "last_opened_file_path": "/home/nineleaps/PycharmProjects/PythonProject/bronze"
+  }
+}]]></component>
+  <component name="RecentsManager">
+    <key name="CopyFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/bronze" />
+    </key>
+  </component>
+  <component name="SharedIndexes">
+    <attachedChunks>
+      <set>
+        <option value="bundled-python-sdk-d9fa9deec7cb-d902c0275401-com.jetbrains.pycharm.community.sharedIndexes.bundled-PC-252.23892.515" />
+      </set>
+    </attachedChunks>
+  </component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="7a4e46d7-e68a-4438-b8ed-8f4bb682ed95" name="Changes" comment="" />
+      <created>1756360269157</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1756360269157</updated>
+    </task>
+    <servers />
+  </component>
+</project>
