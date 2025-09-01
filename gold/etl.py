@@ -1,6 +1,8 @@
 import psycopg2
 
-# Utility function to run SQL queries
+# -------------------------------
+# Utility function to run SQL queries safely
+# -------------------------------
 def run_sql(query):
     try:
         conn = psycopg2.connect(
@@ -10,25 +12,27 @@ def run_sql(query):
             host="localhost",
             port="5432"
         )
+        conn.autocommit = True
         cur = conn.cursor()
         cur.execute(query)
-        conn.commit()
         cur.close()
         conn.close()
         print("✅ Query executed successfully.")
     except Exception as e:
         print(f"❌ Error: {e}")
 
+# -------------------------------
+# Build Gold Layer (without dropping existing tables)
+# -------------------------------
 def build_gold():
-    # Create schema
+    # Create schema if not exists
     run_sql("CREATE SCHEMA IF NOT EXISTS gold;")
 
     # -------------------------------
-    # Total payments per course
+    # Payments per course
     # -------------------------------
     run_sql("""
-    DROP TABLE IF EXISTS gold.payments_per_course;
-    CREATE TABLE gold.payments_per_course AS
+    CREATE TABLE IF NOT EXISTS gold.payments_per_course AS
     SELECT
         c.course_id,
         c.course_title,
@@ -44,8 +48,7 @@ def build_gold():
     # Enrollments per course
     # -------------------------------
     run_sql("""
-    DROP TABLE IF EXISTS gold.enrollments_per_course;
-    CREATE TABLE gold.enrollments_per_course AS
+    CREATE TABLE IF NOT EXISTS gold.enrollments_per_course AS
     SELECT
         c.course_id,
         c.course_title,
@@ -58,11 +61,10 @@ def build_gold():
     """)
 
     # -------------------------------
-    # Activity summary per student
+    # Student activity summary
     # -------------------------------
     run_sql("""
-    DROP TABLE IF EXISTS gold.student_activity_summary;
-    CREATE TABLE gold.student_activity_summary AS
+    CREATE TABLE IF NOT EXISTS gold.student_activity_summary AS
     SELECT
         s.student_id,
         s.name AS student_name,
@@ -79,8 +81,7 @@ def build_gold():
     # Instructor performance
     # -------------------------------
     run_sql("""
-    DROP TABLE IF EXISTS gold.instructor_performance;
-    CREATE TABLE gold.instructor_performance AS
+    CREATE TABLE IF NOT EXISTS gold.instructor_performance AS
     SELECT
         i.instructor_id,
         i.name AS instructor_name,
@@ -95,11 +96,10 @@ def build_gold():
     """)
 
     # -------------------------------
-    # Dashboard table
+    # Student dashboard
     # -------------------------------
     run_sql("""
-    DROP TABLE IF EXISTS gold.student_dashboard;
-    CREATE TABLE gold.student_dashboard AS
+    CREATE TABLE IF NOT EXISTS gold.student_dashboard AS
     SELECT
         s.student_id,
         s.name AS student_name,
@@ -119,8 +119,7 @@ def build_gold():
     # Top 5 courses by revenue
     # -------------------------------
     run_sql("""
-    DROP TABLE IF EXISTS gold.top5_courses_by_revenue;
-    CREATE TABLE gold.top5_courses_by_revenue AS
+    CREATE TABLE IF NOT EXISTS gold.top5_courses_by_revenue AS
     SELECT
         c.course_id,
         c.course_title,
@@ -136,8 +135,7 @@ def build_gold():
     # Student age distribution
     # -------------------------------
     run_sql("""
-    DROP TABLE IF EXISTS gold.age_distribution;
-    CREATE TABLE gold.age_distribution AS
+    CREATE TABLE IF NOT EXISTS gold.age_distribution AS
     SELECT 
         CASE
             WHEN age BETWEEN 0 AND 18 THEN '0-18'
@@ -151,8 +149,10 @@ def build_gold():
     ORDER BY age_group;
     """)
 
-    print("✅ Gold layer for silver schema built successfully.")
+    print("✅ Gold layer for silver schema built successfully (existing tables preserved).")
 
+# -------------------------------
 # Run the build process
+# -------------------------------
 if __name__ == "__main__":
     build_gold()

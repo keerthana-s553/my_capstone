@@ -1,107 +1,149 @@
-import pandas as pd
-from sqlalchemy import create_engine, Table, MetaData, text
-from sqlalchemy.dialects.postgresql import insert as pg_insert
 import os
+import pandas as pd
+from sqlalchemy import create_engine, Table, Column, Integer, String, Float, Date, MetaData, ForeignKey
+from sqlalchemy.dialects.postgresql import insert
+from sqlalchemy.sql import text
 
-# ---------------- Database Connection ----------------
-engine = create_engine("postgresql+psycopg2://keerthana.s:MyStrongPassword123@localhost:5432/mydb")
-SILVER = "silver"
+# ===============================
+# Database connection
+# ===============================
+engine = create_engine(
+    "postgresql+psycopg2://keerthana.s:MyStrongPassword123@localhost:5432/mydb"
+)
+metadata = MetaData(schema="silver")
 
-# ---------------- Create Schema if Not Exists ----------------
-with engine.connect() as conn:
-    conn.execute(text(f'CREATE SCHEMA IF NOT EXISTS {SILVER}'))
-    conn.commit()
+# ===============================
+# Paths
+# ===============================
+PROJECT_ROOT = os.path.dirname(os.path.dirname(__file__))  # one level up from silver/
+BRONZE_PATH = os.path.join(PROJECT_ROOT, "bronze")
 
-# ---------------- Path to Bronze CSVs ----------------
-csv_folder = "../bronze"  # Update path if needed
+def load_csv(filename):
+    path = os.path.join(BRONZE_PATH, filename)
+    if not os.path.exists(path):
+        raise FileNotFoundError(f"CSV file not found: {path}")
+    df = pd.read_csv(path)
+    print(f"📂 Loaded {filename}: {len(df)} rows, {len(df.columns)} cols")
+    return df
 
-# ---------------- Load Bronze CSVs ----------------
-df_students = pd.read_csv(os.path.join(csv_folder, "students_raw.csv"))
-df_instructors = pd.read_csv(os.path.join(csv_folder, "instructors_raw.csv"))
-df_courses = pd.read_csv(os.path.join(csv_folder, "courses_raw.csv"))
-df_enrollments = pd.read_csv(os.path.join(csv_folder, "enrollments_raw.csv"))
-df_activity = pd.read_csv(os.path.join(csv_folder, "activity_raw.csv"))
-df_payments = pd.read_csv(os.path.join(csv_folder, "payments_raw.csv"))
+# ===============================
+# Define Silver tables
+# ===============================
+students = Table(
+    "students", metadata,
+    Column("student_id", String, primary_key=True),
+    Column("name", String),
+    Column("age", Integer),
+    Column("gender", String),
+    Column("country", String),
+    Column("signup_date", Date),
+    Column("subscription_type", String),
+)
 
-# ---------------- Data Cleaning ----------------
+instructors = Table(
+    "instructors", metadata,
+    Column("instructor_id", String, primary_key=True),
+    Column("name", String),
+    Column("expertise_area", String),
+    Column("rating", Float),
+    Column("join_date", Date),   # ✅ added
+)
 
-# Students
-df_students_clean = df_students.drop_duplicates(subset=["student_id"])
-df_students_clean = df_students_clean.fillna({
-    "name": "Unknown",
-    "age": 0,
-    "gender": "Unknown",
-    "country": "Unknown",
-    "subscription_type": "free"
-})
+courses = Table(
+    "courses", metadata,
+    Column("course_id", String, primary_key=True),
+    Column("course_title", String),
+    Column("instructor_id", String, ForeignKey("silver.instructors.instructor_id")),
+    Column("category", String),
+    Column("difficulty_level", String),
+    Column("duration_hours", Float),
+    Column("price", Float),
+    Column("published_date", Date),
+)
 
-# Instructors
-df_instructors_clean = df_instructors.drop_duplicates(subset=["instructor_id"])
-df_instructors_clean = df_instructors_clean.fillna({
-    "name": "Unknown",
-    "expertise_area": "General",
-    "rating": 0
-})
+enrollments = Table(
+    "enrollments", metadata,
+    Column("enrollment_id", String, primary_key=True),
+    Column("student_id", String, ForeignKey("silver.students.student_id")),
+    Column("course_id", String, ForeignKey("silver.courses.course_id")),
+    Column("enrollment_date", Date),
+    Column("status", String),
+    Column("progress_percent", Float),
+)
 
-# Courses
-df_courses_clean = df_courses.drop_duplicates(subset=["course_id"])
-df_courses_clean = df_courses_clean.fillna({
-    "category": "General",
-    "difficulty_level": "Beginner",
-    "duration_hours": 0,
-    "price": 0
-})
+activity = Table(
+    "activity", metadata,
+    Column("activity_id", String, primary_key=True),
+    Column("student_id", String, ForeignKey("silver.students.student_id")),
+    Column("course_id", String, ForeignKey("silver.courses.course_id")),
+    Column("video_watched_min", Float),
+    Column("quiz_score", Float),
+    Column("assignment_score", Float),
+    Column("timestamp", Date),
+)
 
-# Enrollments
-df_enrollments_clean = df_enrollments.drop_duplicates(subset=["enrollment_id"])
-df_enrollments_clean = df_enrollments_clean.fillna({
-    "status": "active",
-    "progress_percent": 0
-})
+payments = Table(
+    "payments", metadata,
+    Column("payment_id", String, primary_key=True),
+    Column("student_id", String, ForeignKey("silver.students.student_id")),
+    Column("course_id", String, ForeignKey("silver.courses.course_id")),
+    Column("amount", Float),
+    Column("currency", String),
+    Column("payment_date", Date),
+    Column("status", String),   # ✅ added
+)
 
-# Activity
-df_activity_clean = df_activity.drop_duplicates(subset=["activity_id"])
-df_activity_clean = df_activity_clean.fillna({
-    "video_watched_min": 0,
-    "quiz_score": 0,
-    "assignment_score": 0
-})
-
-# Payments
-df_payments_clean = df_payments.drop_duplicates(subset=["payment_id"])
-df_payments_clean = df_payments_clean.fillna({
-    "amount": 0,
-    "currency": "USD"
-})
-
-# ---------------- Function to Upsert into Silver Schema ----------------
-metadata = MetaData(schema=SILVER)
-
-def append_safely(df, table_name, conflict_cols):
-    table = Table(table_name, metadata, autoload_with=engine)
+# ===============================
+# Upsert helper
+# ===============================
+def upsert_safely(df, table, key_columns):
+    if df.empty:
+        print(f"⚠️ Skipping {table.name}, no rows")
+        return
     with engine.begin() as conn:
         for _, row in df.iterrows():
-            stmt = pg_insert(table).values(**row.to_dict())
-            stmt = stmt.on_conflict_do_nothing(index_elements=conflict_cols)
+            row_dict = {col.name: row[col.name] for col in table.columns if col.name in df.columns}
+            stmt = insert(table).values(**row_dict)
+            update_dict = {col: row_dict[col] for col in row_dict if col not in key_columns}
+            stmt = stmt.on_conflict_do_update(index_elements=key_columns, set_=update_dict)
             conn.execute(stmt)
+    print(f"✅ {table.name.capitalize()} upserted ({len(df)} rows)")
 
-# ---------------- Append Data ----------------
-append_safely(df_students_clean, "students", ["student_id"])
-print("✅ Students appended")
+# ===============================
+# Main ETL process
+# ===============================
+if __name__ == "__main__":
+    # Create schema if not exists and recreate tables
+    with engine.begin() as conn:
+        conn.execute(text("CREATE SCHEMA IF NOT EXISTS silver;"))
+        metadata.drop_all(conn)
+        metadata.create_all(conn)
+        print("✅ Silver tables recreated")
 
-append_safely(df_instructors_clean, "instructors", ["instructor_id"])
-print("✅ Instructors appended")
+    # Load CSVs from bronze
+    df_students    = load_csv("students_raw.csv")
+    df_instructors = load_csv("instructors_raw.csv")
+    df_courses     = load_csv("courses_raw.csv")
+    df_enrollments = load_csv("enrollments_raw.csv")
+    df_activity    = load_csv("activity_raw.csv")
+    df_payments    = load_csv("payments_raw.csv")
 
-append_safely(df_courses_clean, "courses", ["course_id"])
-print("✅ Courses appended")
+    # -----------------------------
+    # Convert date columns to datetime
+    # -----------------------------
+    df_students['signup_date']     = pd.to_datetime(df_students['signup_date'], format='%m/%d/%Y', errors='coerce')
+    df_instructors['join_date']    = pd.to_datetime(df_instructors['join_date'], format='%m/%d/%Y', errors='coerce')  # ✅ added
+    df_courses['published_date']   = pd.to_datetime(df_courses['published_date'], format='%m/%d/%Y', errors='coerce')
+    df_enrollments['enrollment_date'] = pd.to_datetime(df_enrollments['enrollment_date'], format='%m/%d/%Y', errors='coerce')
+    df_activity['timestamp']       = pd.to_datetime(df_activity['timestamp'], format='%m/%d/%Y', errors='coerce')
+    df_payments['payment_date']    = pd.to_datetime(df_payments['payment_date'], format='%m/%d/%Y', errors='coerce')
 
-append_safely(df_enrollments_clean, "enrollments", ["enrollment_id"])
-print("✅ Enrollments appended")
+    # Upsert into Silver
+    upsert_safely(df_students, students, ["student_id"])
+    upsert_safely(df_instructors, instructors, ["instructor_id"])
+    upsert_safely(df_courses, courses, ["course_id"])
+    upsert_safely(df_enrollments, enrollments, ["enrollment_id"])
+    upsert_safely(df_activity, activity, ["activity_id"])
+    upsert_safely(df_payments, payments, ["payment_id"])
 
-append_safely(df_activity_clean, "activity", ["activity_id"])
-print("✅ Activity appended")
-
-append_safely(df_payments_clean, "payments", ["payment_id"])
-print("✅ Payments appended")
-
-print("🎉 All Bronze data successfully loaded into Silver schema!")
+    print("🎉 All Silver tables loaded successfully!")

@@ -1,45 +1,48 @@
-import pandas as pd
-import psycopg2
 import os
+import pandas as pd
+from sqlalchemy import create_engine, text
+from datetime import datetime
 
-# Output folder (Downloads/gold_csv)
-output_folder = "/home/nineleaps/Downloads/gold_csv"
-os.makedirs(output_folder, exist_ok=True)
+# -------------------------------
+# Configuration
+# -------------------------------
+DB_URI = "postgresql+psycopg2://keerthana.s:MyStrongPassword123@localhost:5432/mydb"
+OUTPUT_FOLDER = "/home/nineleaps/Downloads/gold_csv"
+os.makedirs(OUTPUT_FOLDER, exist_ok=True)
 
-# DB connection
-conn = psycopg2.connect(
-    host="localhost",
-    database="mydb",
-    user="keerthana.s",
-    password="MyStrongPassword123"
-)
+# -------------------------------
+# Create SQLAlchemy engine
+# -------------------------------
+engine = create_engine(DB_URI)
 
-# Gold tables list for education schema
-tables = [
-    "dashboard_table",
-    "payments_per_course",
-    "enrollments_per_course",
-    "student_activity_summary",
-    "instructor_performance",
-    "students_per_country",
-    "yearly_student_enrollments",
-    "top5_courses_by_revenue",
-    "top_course_per_year",
-    "age_distribution"
-]
+# -------------------------------
+# Fetch all tables in 'gold' schema
+# -------------------------------
+with engine.connect() as conn:
+    tables_query = text("""
+        SELECT table_name 
+        FROM information_schema.tables 
+        WHERE table_schema = 'gold';
+    """)
+    result = conn.execute(tables_query)
+    gold_tables = [row[0] for row in result.fetchall()]
 
-# Export loop
-for table in tables:
+# -------------------------------
+# Export each table to CSV
+# -------------------------------
+timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+
+for table in gold_tables:
     try:
-        df = pd.read_sql(f"SELECT * FROM gold.{table};", conn)
+        df = pd.read_sql(f"SELECT * FROM gold.{table};", engine)
         if not df.empty:
-            filepath = f"{output_folder}/{table}.csv"
+            filename = f"{table}_{timestamp}.csv"
+            filepath = os.path.join(OUTPUT_FOLDER, filename)
             df.to_csv(filepath, index=False)
-            print(f"{table}.csv exported to {filepath} successfully!")
+            print(f"✅ {table}.csv exported to {filepath}")
         else:
             print(f"⚠️ {table} exists but is empty.")
     except Exception as e:
-        print(f"⚠️ Skipping {table}: {e}")
+        print(f"❌ Skipping {table}: {e}")
 
-# Close connection
-conn.close()
+print("🎉 All Gold tables exported successfully!")
